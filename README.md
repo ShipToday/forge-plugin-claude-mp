@@ -14,7 +14,7 @@ The official [Claude Code](https://code.claude.com) plugin marketplace from
 Add this marketplace to Claude Code, then install a plugin from it:
 
 ```
-/plugin marketplace add ShipToday/forge-plugin-claude-marketplace
+/plugin marketplace add ShipToday/forge-plugin-claude-mp
 /plugin install forge-shiptoday@shiptoday
 ```
 
@@ -31,7 +31,7 @@ To update later:
 ## Repository structure
 
 ```
-forge-plugin-claude-marketplace/
+forge-plugin-claude-mp/
 ├── .claude-plugin/
 │   └── marketplace.json          # Marketplace manifest (lists the plugins)
 ├── plugins/
@@ -61,18 +61,18 @@ directories.
 Test the marketplace from a local checkout before pushing:
 
 ```bash
-git clone https://github.com/ShipToday/forge-plugin-claude-marketplace
+git clone https://github.com/ShipToday/forge-plugin-claude-mp
 ```
 
 ```
-/plugin marketplace add ./forge-plugin-claude-marketplace
+/plugin marketplace add ./forge-plugin-claude-mp
 /plugin install forge-shiptoday@shiptoday
 ```
 
 To work on the Forge plugin in isolation, point Claude Code at its directory:
 
 ```bash
-claude --plugin-dir ./forge-plugin-claude-marketplace/plugins/forge-shiptoday
+claude --plugin-dir ./forge-plugin-claude-mp/plugins/forge-shiptoday
 ```
 
 ## Adding a plugin to this marketplace
@@ -85,7 +85,7 @@ claude --plugin-dir ./forge-plugin-claude-marketplace/plugins/forge-shiptoday
    `name`, a repo-relative `source` (`./plugins/<your-plugin>`), and a
    `description`.
 3. Validate the JSON and confirm it loads with
-   `/plugin marketplace add ./forge-plugin-claude-marketplace`.
+   `/plugin marketplace add ./forge-plugin-claude-mp`.
 
 ## License
 
