@@ -1,0 +1,15 @@
+{
+  "name": "shiptoday",
+  "description": "Official ShipToday marketplace for Claude Code plugins.",
+  "version": "1.0.0",
+  "owner": {
+    "name": "ShipToday"
+  },
+  "plugins": [
+    {
+      "name": "forge-shiptoday",
+      "source": "./plugins/forge-shiptoday",
+      "description": "Forge by ShipToday — Free, AI-powered product development lifecycle automation. Describe what you want to build and Forge routes your feature requests, bug reports, and architecture explorations through structured PDLC workflows. No trigger words needed."
+    }
+  ]
+}
