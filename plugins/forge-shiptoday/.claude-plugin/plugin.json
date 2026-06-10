@@ -1,7 +1,7 @@
 {
   "name": "forge-shiptoday",
   "description": "Forge by ShipToday — Free, AI-powered product development lifecycle automation. Automatically routes your feature requests, bug reports, and architecture explorations through structured PDLC workflows. Just describe what you want to build — no trigger words needed.",
-  "version": "1.1.7",
+  "version": "1.2.0",
   "author": {
     "name": "ShipToday"
   },
