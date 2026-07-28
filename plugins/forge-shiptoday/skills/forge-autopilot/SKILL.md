@@ -467,9 +467,10 @@ it in a relay envelope:
 > **Relay to the user** — render the block between the sentinels below ...
 
 <<<FORGE_DISPLAY_VERBATIM id="position">>>
-+==========================================================+
-**Step 2 of 8: Discover AI SDLC** — next: ... · then: ...
-+==========================================================+
+### Step 2 of 8: Discover AI SDLC
+next: ... · then: ...
+
+---
 <<<END FORGE_DISPLAY_VERBATIM>>>
 ```
 
@@ -480,6 +481,13 @@ Rules:
   has got to.
 - **Render it before anything else in that turn** — before analysis, before
   delegating, before your next tool call.
+- **Unless a hook tells you it is already on screen.** On clients that ship
+  Forge's `must-display` PostToolUse hook (Claude Code and Codex today; not
+  Cursor), the hook renders these blocks itself and returns a notice saying so.
+  When you see that notice, the block is already in front of the user — do NOT
+  render it again, or they see it twice. The notice wins over the "render
+  verbatim" rule above, because it reports what has already happened. With no
+  such notice, you are the only channel, so render it.
 - **It is always the parent's job.** These blocks sit OUTSIDE the
   `<<<FORGE_NEXT_STEP>>>` envelope and above `---DELEGATE BELOW---`, so a
   sub-agent never receives one as part of its prompt. If you ARE a sub-agent and
