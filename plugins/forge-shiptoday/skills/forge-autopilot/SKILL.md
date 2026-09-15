@@ -197,6 +197,14 @@ session observer. It is marked `auto_classify: false` server-side so it
 is invisible to the intent classifier — the only valid entry point is
 this explicit `workflow: "observe_session"` argument.
 
+**Client authority stops at eligibility.** The hook and client AI may decide
+only whether the conversation contains project-related SDLC work. If it does,
+start `observe_session`; if it does not, skip it. Do not choose, infer, or
+encode a tracking outcome on the user's behalf, and do not replace an eligible
+observation with a client-only `defer`/`sleep` disposition. Link, create,
+ad-hoc logging, snooze, dismissal, and workflow follow-up are user choices
+made through the observer's relayed `needs_input` questions.
+
 Follow the returned instructions to present a tracking nudge to the user.
 Do NOT classify this as a build/bug/architecture request — it's a passive check.
 
@@ -274,7 +282,9 @@ tool calls when the active step does not allow them. Two layers:
 skill is awaiting user input), the only tools you may call until the
 user has answered are:
 
-- `AskUserQuestion` — relay the pending question
+- The host's available user-question tool — `AskUserQuestion` on Claude Code,
+  `request_user_input` on Codex — or a numbered reply when no compatible native
+  question tool is callable
 - `forge__update_state` — advance with the user's answer
 - `forge__abandon_workflow` — exit when the workflow no longer applies (see
   below; it is not a way to end a run early)
@@ -295,13 +305,14 @@ is not in the list. Categories are coarse:
 | Category | Tools |
 |----------|-------|
 | `read_code` | `Read`, `Grep`, `Glob` (always allowed regardless) |
-| `ask_user` | `AskUserQuestion` (always allowed regardless) |
+| `ask_user` | Host user-question tool: `AskUserQuestion` on Claude Code or `request_user_input` on Codex (always allowed regardless) |
 | `web` | `WebFetch`, `WebSearch` |
 | `tracker_read` | `list_issues`, `get_issue`, `list_comments`, `search_threads`, … |
 | `tracker_write` | `save_issue`, `create_issue`, `save_comment`, `update_issue`, … |
 | `docs_read` / `docs_write` | Notion read / write |
 | `messaging` | Slack send |
 | `calendar` / `design` / `meetings` | Per-connector groups |
+| `conversation_artifact` | task-owned `.html`/`.svg` backing file for an inline renderer; never a repository file |
 | `code_edit` | `Edit`, `Write`, `NotebookEdit` |
 | `shell` | `Bash`, `PowerShell`, `Monitor` (executes a command) |
 
@@ -312,7 +323,8 @@ but not `tracker_write` — the model can send a Slack message but not
 silently rewrite the ticket.
 
 Anything denied gets an actionable reason that points at the three
-legitimate next moves: relay (`AskUserQuestion`), advance
+legitimate next moves: relay with the host's available question tool (or a
+numbered reply when none is callable), advance
 (`forge__update_state`), or abandon (`forge__abandon_workflow` — only when
 the workflow itself no longer applies). On Claude Code the guard uses the
 host's PreToolUse denial format. Other hosts may expose different hook
@@ -378,6 +390,15 @@ optional integrity annotation. After every sub-agent return:
    Findings the sub-agent put in `display_text` are preserved as a
    `## Findings` block in the fetched response, so no analytical
    output is dropped — only the verbatim relay shortcut was skipped.
+
+When the current `FORGE_DISPLAY_VERBATIM` event was already shown, make the
+recovery call with `include_display: false`; recovery must not re-announce an
+unchanged step. The response publishes `Instruction Bytes` before the body. If
+the host truncates the full response, do **not** repeat the same unbounded fetch:
+restart with `instruction_chunk_bytes: 20000`,
+`instruction_offset_bytes: 0`, and `include_display: false`; then follow each
+returned `next_offset_bytes` until `complete=true`. Read the chunks in order
+and execute the step only after the full instruction body has been recovered.
 
 **Diagnostic phrasing**: when this happens, describe it as a fetch
 ("the envelope isn't in the sub-agent's return — fetching canonical
@@ -576,7 +597,7 @@ it in a relay envelope:
 ```
 > **Relay to the user** — render the block between the sentinels below ...
 
-<<<FORGE_DISPLAY_VERBATIM id="position">>>
+<<<FORGE_DISPLAY_VERBATIM id="position:step_<uuid>">>>
 ### Step 2 of 8: Discover AI SDLC
 next: ... · then: ...
 
@@ -591,19 +612,23 @@ Rules:
   has got to.
 - **Render it before anything else in that turn** — before analysis, before
   delegating, before your next tool call.
-- **Render it even if you think a hook already did.** Some clients ship Forge's
-  `must-display` PostToolUse hook, but where its output lands varies: on
-  claude-desktop it goes to the transcript, not to the screen. You cannot tell
-  from inside the turn, so always render — a duplicate is untidy, a missing
-  marker leaves the user with no view of the run at all.
+- **On first sight, render it even if you think a hook already did.** Some
+  clients ship Forge's `must-display` PostToolUse hook, but where its output
+  lands varies: on claude-desktop it can go to the transcript rather than the
+  screen. Believing the hook fired is never enough to suppress a marker. The only
+  safe suppression is an exact event id replay that you already rendered in
+  one of your own user-facing messages (see the id rule below).
 - **It is always the parent's job.** These blocks sit OUTSIDE the
   `<<<FORGE_NEXT_STEP>>>` envelope and above `---DELEGATE BELOW---`, so a
   sub-agent never receives one as part of its prompt. If you ARE a sub-agent and
   one appears in a tool result you got, relay it to your parent unrendered along
   with the envelope — your parent is the one talking to the user.
-- **Two ids exist today**: `preflight` (the "what to expect" brief, once at the
-  start of a run) and `position` (the "Step N of M" marker, once per step).
-  Treat any future id the same way.
+- **Display ids are event identities.** `preflight` identifies the once-per-run
+  brief. `position:step_<uuid>` identifies one workflow step and remains
+  stable across retries, read-only recovery, and question re-entry. Render an
+  id the first time you see it. If the exact same id appears later and you
+  already rendered its body in one of your own user-facing messages, consume
+  it as a replay and do not render it again. A new id is always a new event.
 
 ## Step 5: Coexist with planning/dry-run modes
 
