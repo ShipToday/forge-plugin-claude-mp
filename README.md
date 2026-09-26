@@ -7,7 +7,7 @@ The official [Claude Code](https://code.claude.com) plugin marketplace from
 
 | Plugin | Description |
 | ------ | ----------- |
-| [`forge-shiptoday`](plugins/forge-shiptoday) | Free, AI-powered product development lifecycle automation. Just describe what you want to build — Forge routes your feature requests, bug reports, and architecture explorations through structured PDLC workflows. No trigger words needed. |
+| [`forge-shiptoday`](plugins/forge-shiptoday) | Free, AI-powered product development lifecycle automation. Ask Forge by name — `forge, implement PROJ-123` — and it routes your feature requests, bug reports, and architecture explorations through structured PDLC workflows. Without the keyword, Forge stays out of the way. |
 
 ## Installation
 
