@@ -1,7 +1,7 @@
 {
   "name": "forge-shiptoday",
   "description": "Forge by ShipToday — Free, AI-powered product development lifecycle automation. Ask Forge by name — \"forge, implement PROJ-123\" or \"@forge plan the notifications feature\" — and it routes your feature requests, bug reports, and architecture explorations through structured PDLC workflows. Without the keyword, Forge stays out of the way.",
-  "version": "2.3.5",
+  "version": "2.4.0",
   "author": {
     "name": "ShipToday"
   },
