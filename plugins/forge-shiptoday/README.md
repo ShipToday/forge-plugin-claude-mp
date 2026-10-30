@@ -55,6 +55,34 @@ planning or shipping work or mentions a ticket like `PROJ-123`.
   The hook scripts make no network calls. They keep session state in
   local files and pass instructions to Claude.
 
+## Ask first before destructive commands
+
+Forge asks before it changes code or does something hard to undo, but a
+shell command runs as soon as Claude Code is allowed to run it. To have
+Claude Code ask you first before commands that are hard to take back, add
+`ask` rules to your settings — `~/.claude/settings.json` for every project,
+or `.claude/settings.json` in a repository:
+
+```json
+{
+  "permissions": {
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git branch -D:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh release create:*)",
+      "Bash(rm -rf:*)"
+    ]
+  }
+}
+```
+
+Add or remove entries to match the commands your team treats as risky. An
+`ask` rule only adds a confirmation: nothing is blocked, and commands not
+listed run as they do today.
+
 ## Installation
 
 Add the ShipToday marketplace, then install the plugin from it:
