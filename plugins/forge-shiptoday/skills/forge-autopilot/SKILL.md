@@ -381,8 +381,9 @@ while a write is waiting for the user's approval. Two layers:
 
 **Layer 1 — CHECKPOINT enforcement.** When the orchestrator returns a
 `**CHECKPOINT**` response from `forge__update_state` (a relayed-question
-skill is awaiting user input), the only tools you may call until the
-user has answered are:
+skill is awaiting user input), the hook holds write tools — the same ones the
+write lock holds (tracker, docs and messaging writes, code-host connector
+writes, `Edit`/`Write`) — until the user has answered. Everything else passes:
 
 - The host's compatible, permitted user-question tool — `AskUserQuestion` on
   Claude Code, `request_user_input` or `request_user_input_async` on Codex — or
@@ -390,17 +391,15 @@ user has answered are:
 - `forge__update_state` — advance with the user's answer
 - `forge__abandon_workflow` — exit when the workflow no longer applies (see
   below; it is not a way to end a run early)
-- Read-only inspection: `Read`, `Grep`, `Glob`, `TodoWrite`, plus read-only
-  MCP tools (names starting with `list_`, `get_`, `search_`, `query_`,
-  `fetch_`, `read_`, `notion-search`, `notion-fetch`, `notion-get-`, and
-  Slack's `slack_read_`, `slack_search_`, `slack_list_`, `slack_get_`)
-- Recovery and coordination: `ToolSearch`, `Skill`, `ScheduleWakeup`,
-  `TaskOutput`, `ListAgents`, `Agent`, `Task`, and the host task
-  tools `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`.
+- Reads, such as `Read`, `Grep`, `Glob`, `WebFetch`, `WebSearch` and read-only
+  MCP tools
+- The host's own task-list, progress and coordination tools, such as
+  `TodoWrite`, `ToolSearch`, `Skill`, `Agent` and `Task`
 
 The hook does not check shell commands, here or anywhere (see below). While a
 question is pending, the instructions still apply: wait for the user's answer,
-and use the shell only to inspect, never to act on the decision being asked.
+and use any tool or the shell only to ask, inspect or coordinate, never to act
+on the decision being asked.
 
 **Layer 2 — the write lock.** A step set to Always asks that writes carries a
 `**Write Lock**: on` line until its write plan is approved. Until then the hook
