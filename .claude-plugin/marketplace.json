@@ -1,7 +1,7 @@
 {
   "name": "shiptoday",
   "description": "Official ShipToday marketplace for Claude Code plugins.",
-  "version": "2.13.0",
+  "version": "2.14.0",
   "owner": {
     "name": "ShipToday"
   },
