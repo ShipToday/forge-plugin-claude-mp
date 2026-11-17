@@ -64,6 +64,7 @@
 
 const sessionStateModule = require('./session-state.cjs');
 const { activityForUpdate } = require('./activity-intervals.cjs');
+const { observationsForUpdate } = require('./observed-calls.cjs');
 const { resolveSessionRecords, captureTokenUsageFromResolved } = require('./token-usage.cjs');
 const { activeMsFromEvent, activeMsFromResolved } = require('./active-time.cjs');
 
@@ -517,10 +518,43 @@ async function main() {
   // the call unchanged — token capture must never block forge__update_state.
   if (bare === 'forge__update_state') {
     // The approval check above has already run on this call.
+    let toolInput;
+    let stateUpdates;
     try {
-      let toolInput = event.tool_input || {};
+      toolInput = event.tool_input || {};
       if (typeof toolInput === 'string') toolInput = JSON.parse(toolInput);
-      const stateUpdates = { ...(toolInput.state_updates || {}) };
+      stateUpdates = { ...(toolInput.state_updates || {}) };
+    } catch {
+      return; // Unreadable input carries no usable fields; allow it unchanged.
+    }
+    // Track whether we changed state_updates at all; the rewrite is emitted
+    // if any stamp below did.
+    let changed = false;
+
+    // What the session ran (observed-calls.cjs), FIRST and on its own: unlike
+    // the stamps below it ALWAYS replaces what the caller sent — observed
+    // evidence the AI could write would just be reported evidence again.
+    // With nothing to stamp, a caller-sent value is removed. Done before
+    // anything else can fail, so a failure later still strips it.
+    const callerSentObserved = Object.hasOwn(stateUpdates, 'observed_tool_calls') || Object.hasOwn(stateUpdates, 'observation_supported');
+    try {
+      const observed = observationsForUpdate(state);
+      if (observed) {
+        stateUpdates.observed_tool_calls = observed.calls;
+        stateUpdates.observation_supported = observed.supported;
+        changed = true;
+      } else if (callerSentObserved) {
+        delete stateUpdates.observed_tool_calls;
+        delete stateUpdates.observation_supported;
+        changed = true;
+      }
+    } catch {
+      delete stateUpdates.observed_tool_calls;
+      delete stateUpdates.observation_supported;
+      changed = changed || callerSentObserved;
+    }
+
+    try {
       // Resolve the session log ONCE per invocation — token capture and the
       // active-time stamp below consume the same parsed records instead of
       // each re-reading multi-MiB transcript files.
@@ -535,7 +569,6 @@ async function main() {
       //     rows across all its Forge conversations — this workflow + the
       //     observer — instead of counting one per conversation), and
       //   - duration_ms (idle-excluded active time; active-workflow steps only).
-      let changed = false;
       const earlier = activityForUpdate(state, stateUpdates);
       if (earlier) { stateUpdates.unrecorded_activity = earlier; changed = true; }
       const checkpoint = state.checkpoint_activity_window;
@@ -592,21 +625,23 @@ async function main() {
         }
       }
 
-      // updatedInput REPLACES the tool input (Claude Code does not merge), so
-      // echo the complete object back with the enriched state_updates — but only
-      // when we added something (token_usage, client_session_id, and/or duration_ms).
-      if (changed) {
-        process.stdout.write(JSON.stringify({
-          hookSpecificOutput: {
-            hookEventName: 'PreToolUse',
-            permissionDecision: 'allow',
-            updatedInput: { ...toolInput, state_updates: stateUpdates },
-          },
-        }));
-        return;
-      }
     } catch {
-      // Fall through — allow the call unchanged.
+      // Token and activity stamps are best-effort; the observed stamp above
+      // still goes out.
+    }
+
+    // updatedInput REPLACES the tool input (Claude Code does not merge), so
+    // echo the complete object back with the enriched state_updates — but only
+    // when we changed something (the observed calls, token_usage,
+    // client_session_id or duration_ms).
+    if (changed) {
+      process.stdout.write(JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'allow',
+          updatedInput: { ...toolInput, state_updates: stateUpdates },
+        },
+      }));
     }
     return; // forge__update_state is universally allowed regardless.
   }
